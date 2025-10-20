@@ -5,9 +5,11 @@ using Proto;
 
 namespace GameServer.Network
 {
+    #region 服务端网络服务
     /// <summary>
-    /// 网络服务
+    /// 服务端网络服务
     /// </summary>
+    #endregion
     public class NetService
     {
         public NetService() { }
@@ -31,6 +33,12 @@ namespace GameServer.Network
             listener.SocketConnectedEvent += OnClientConnected;//订阅客户端接入事件
             
         }
+
+        #region 启动网络监听器
+        /// <summary>
+        /// 启动网络监听器
+        /// </summary>
+        #endregion
         public void Start()
         {
             listener.Start();
@@ -56,15 +64,28 @@ namespace GameServer.Network
                                   new NetConnection.DisConnectedCallback(OnDisConnected));
         }
 
+        #region 服务端接收消息的处理
+        /// <summary>
+        /// 服务端接收消息的处理
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="data"></param>
+        #endregion
         private void OnDataReceived(NetConnection sender, byte[] data)
         {
-            Vector3 v = Vector3.Parser.ParseFrom(data);
-            Console.WriteLine(v.ToString());
+            //将接收到的字节流转换成Package类型的数据包
+            Proto.Package package = Package.Parser.ParseFrom(data);
 
             //将收到的消息放入消息队列中
-            MessageRouter.Instance.AddMessage(sender, v);
+            MessageRouter.Instance.AddMessage(sender, package);
         }
 
+        #region 断开连接的处理
+        /// <summary>
+        /// 断开连接的处理
+        /// </summary>
+        /// <param name="sender"></param>
+        #endregion
         private void OnDisConnected(NetConnection sender)
         {
             Console.WriteLine("连接断开！");

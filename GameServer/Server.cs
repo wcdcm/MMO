@@ -17,6 +17,7 @@ namespace GameServer
             netService.Start();
             #endregion
 
+            //测试：
             MessageRouter.Instance.On<Vector3>(fff);
             MessageRouter.Instance.On<Vector3>(fff);
             MessageRouter.Instance.On<Vector3>(fff);

@@ -5,7 +5,7 @@ namespace Common.Network
 {
     #region 消息单元
     /// <summary>
-    /// 消息单元；包含消息发送者和消息本身
+    /// 消息单元；包含消息发送者和消息本身内容
     /// </summary>
     #endregion
     public class MessageUnit
@@ -13,7 +13,7 @@ namespace Common.Network
         public NetConnection sender;
 
         //所有不同的消息都有一个共同的父类，叫IMessage
-        public Google.Protobuf.IMessage message;
+        public Proto.Package message;
     }
 
     #region 消息分发器
@@ -82,7 +82,7 @@ namespace Common.Network
             //委托是可以组合的，通过+号形成一个委托链，当触发委托时，所有的注册者都会被触发
             delegateMap[msgType] = (MessageHandler<T>)delegateMap[msgType] + handler;
 
-            Console.WriteLine(msgType + ":" + delegateMap[msgType].GetInvocationList().Length);
+            Console.WriteLine("消息类型：" + msgType + "、" +"委托链长度：" + delegateMap[msgType].GetInvocationList().Length);
         }
 
         #region 退订频道
@@ -111,10 +111,11 @@ namespace Common.Network
         /// 添加新的消息到队列中
         /// </summary>
         /// <param name="sender">消息发送者</param>
-        /// <param name="message">消息对象</param>
+        /// <param name="message">消息对象，一定是Package类型的</param>
         #endregion
-        public void AddMessage(NetConnection sender, Google.Protobuf.IMessage message)
+        public void AddMessage(NetConnection sender, Proto.Package message)
         {
+            //将消息和发送者绑定，作为一个消息单元填入消息队列
             var unit = new MessageUnit() { sender = sender, message = message };
             messageQueue.Enqueue(unit);
 
@@ -146,6 +147,9 @@ namespace Common.Network
             }
         }
 
+        /// <summary>
+        /// 关闭消息分发器
+        /// </summary>
         public void Stop()
         {
             Running = false;
@@ -166,10 +170,13 @@ namespace Common.Network
             Thread.Sleep(100);
         }
 
+        #region 每个线程独有的消息处理方法...
         /// <summary>
-        /// 每个线程独有的消息处理方法
+        /// <para>每个线程独有的消息处理方法</para>
+        /// <para>只要有线程在运行，就会执行MessageWork中的代码</para>
         /// </summary>
         /// <param name="state"></param>
+        #endregion
         private void MessageWork(object? state)
         {
 
@@ -192,19 +199,20 @@ namespace Common.Network
                         #endregion
                         threadEvent.WaitOne();
 
-                        continue;
                         #region 为什么要用continue...
                         //唤醒后先进入下一次循环，
-                        //先判断是否Running，如果不Running直接进入finally。
-                        //如果Running再判断一次messageQueue长度是否为0，
+                        //先判断是否Running，如果没有在Running直接进入finally。
+                        //如果在Running再判断一次messageQueue长度是否为0，
                         //如果为0 就继续等待。
                         //----------------------------------------------------
                         //为什么要这样做：
                         //因为唤醒需要一定时间，
-                        //无法保证这个时间内MessageQueue里的消息是否被别的进程消费了
-                        //也无法保证这个唤醒的来源到底是 添加消息：AddMessage方法 还是 要关闭转发器：Stop方法
+                        //无法保证这段时间内MessageQueue里的消息是否被别的进程消费了
+                        //也无法保证这个唤醒的来源到底是 添加消息的AddMessage方法 还是 要关闭转发器的Stop方法
                         //所以要再进行一次Running判断和messageCount判断
                         #endregion
+                        continue;
+                        
                     }
                     //从消息队列中取出一个消息单元：
                     MessageUnit pack = messageQueue.Dequeue();
