@@ -49,7 +49,7 @@ namespace Common.Network
             LengthFieldDecoder lfd = new LengthFieldDecoder(socket, 64 * 1024, 0, 4, 0, 4);//定义读取数据(message)的方式
             
             //消息接收事件订阅
-            lfd.DataReceived += OnDataReceived;
+            lfd.DataReceived += DataReceivedHandler;
 
             //断开连接事件订阅
             lfd.Disconnected += (Socket socket)=> disConnectedCallback?.Invoke(this);
@@ -64,7 +64,7 @@ namespace Common.Network
         /// </summary>
         /// <param name="buffer"></param>
         #endregion
-        private void OnDataReceived(byte[] buffer)
+        private void DataReceivedHandler(byte[] buffer)
         {
             //触发接收消息的回调方法
             dataReceivedCallback?.Invoke(this,buffer);

@@ -38,10 +38,30 @@ namespace TestClient
             //    SendMessage(socket, Encoding.UTF8.GetBytes(txt));
             //}
             #endregion
-            Vector3 v = new Vector3() { X = 100,Y = 200,Z = 300};
-            byte[] data = v.ToByteArray();
-            SendMessage(socket, data);
+
+            #region Test2
+            //Vector3 v = new Vector3() { X = 100,Y = 200,Z = 300};
+            //byte[] data = v.ToByteArray();
+            //SendMessage(socket, data);
+            //Console.ReadKey();
+            #endregion
+
+            #region 用户注册测试
+            Proto.Package package = new Package();
+            package.Request = new Proto.Request();
+            package.Request.UserRegisterRequest = new UserRegisterRequest();
+            package.Request.UserRegisterRequest.Username = "who";
+            package.Request.UserRegisterRequest.Password = "who124553";
+            //byte[] pack = package.ToByteArray();
+
+            MemoryStream rawOutput = new MemoryStream();//基于内存的数据流，用于临时存储二进制数据,作为 Protobuf 序列化数据的 “临时缓冲区”，后续序列化后的二进制内容会写入该流。
+            CodedOutputStream output = new CodedOutputStream(rawOutput);
+            package.WriteTo(output);
+            output.Flush();
+
+            SendMessage(socket, rawOutput.ToArray());
             Console.ReadKey();
+            #endregion
         }
 
         /// <summary>

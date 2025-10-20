@@ -1,5 +1,6 @@
 ﻿using Common;
 using Google.Protobuf;
+using Proto;
 
 namespace Common.Network
 {
@@ -56,8 +57,9 @@ namespace Common.Network
 
         #region 消息频道字典
         /// <summary>
-        /// 消息频道字典。
-        /// string是频道名字；Delegate是一个委托类型，是所有消息频道的父类型
+        /// <para>消息频道字典(订阅记录)</para>
+        /// <para>string是频道名字；</para>
+        /// <para>Delegate是一个委托类型，是所有消息频道的父类型</para>
         /// </summary>
         #endregion
         private Dictionary<string, Delegate> delegateMap = new Dictionary<string, Delegate>();
@@ -82,7 +84,7 @@ namespace Common.Network
             //委托是可以组合的，通过+号形成一个委托链，当触发委托时，所有的注册者都会被触发
             delegateMap[msgType] = (MessageHandler<T>)delegateMap[msgType] + handler;
 
-            Console.WriteLine("消息类型：" + msgType + "、" +"委托链长度：" + delegateMap[msgType].GetInvocationList().Length);
+            Console.WriteLine("消息类型：" + msgType + "、" + "委托链长度：" + delegateMap[msgType].GetInvocationList().Length);
         }
 
         #region 退订频道
@@ -106,6 +108,37 @@ namespace Common.Network
             delegateMap[key] = (MessageHandler<T>)delegateMap[key] - handler;
         }
 
+        #region 触发委托
+        /// <summary>
+        /// <para>根据传进来的消息类型在委托字典中
+        /// 找到这个消息类型对应的委托，并触发委托</para>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="sender"></param>
+        /// <param name="msg"></param>
+        #endregion
+        private void Fire<T>(NetConnection sender, T msg)
+        {
+            string typeName = typeof(T).Name;
+
+            //如果消息类型存在，说明已有频道订阅了这个消息类型，就触发这个委托。
+            //此时所有订阅了该委托的注册者都会被触发
+            if (delegateMap.ContainsKey(typeName)) 
+            {
+                MessageHandler<T> handler = (MessageHandler<T>)delegateMap[typeName];
+
+                //handler可能为空，如果不为空则触发委托
+                try
+                {
+                    handler?.Invoke(sender, msg);
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine("MessageRouter.Fire.error:" + ex.StackTrace);
+                }
+            }
+        }
+
         #region 添加新的消息到队列中
         /// <summary>
         /// 添加新的消息到队列中
@@ -122,7 +155,7 @@ namespace Common.Network
             //唤醒某一个休眠的线程，让它进入工作状态处理消息
             threadEvent.Set();
 
-            Console.WriteLine("当前messageQueue的长度：" + messageQueue.Count);
+
         }
 
         #region 开启多线程（消费者模型）：
@@ -131,8 +164,7 @@ namespace Common.Network
             Running = true;
 
             //限制线程的范围1 - 200：
-            this.threadCount = Math.Min(threadCount, 200);
-            this.threadCount = Math.Max(threadCount, 1);
+            this.threadCount = Math.Min(Math.Max(threadCount, 1), 200);
 
             //创建线程池
             for (int i = 0; i < this.threadCount; i++)
@@ -212,10 +244,24 @@ namespace Common.Network
                         //所以要再进行一次Running判断和messageCount判断
                         #endregion
                         continue;
-                        
+
                     }
                     //从消息队列中取出一个消息单元：
-                    MessageUnit pack = messageQueue.Dequeue();
+                    MessageUnit msg = messageQueue.Dequeue();
+
+                    Proto.Package package = msg.message;
+                    //解析消息
+                    if (package.Request != null)
+                    {
+                        //处理请求：
+                        HandleRequest(msg.sender, package.Request);
+                    }
+
+                    if (package.Response != null)
+                    {
+                        //处理响应：
+                        HandleResponse(msg.sender, package.Response);
+                    }
                 }
 
             }
@@ -228,6 +274,36 @@ namespace Common.Network
 
             // 线程结束打印日志
             Console.WriteLine("work thread end");
+        }
+
+        /// <summary>
+        /// 处理请求
+        /// </summary>
+        private void HandleRequest(NetConnection sender, Proto.Request request)
+        {
+            if (request.UserRegisterRequest != null)
+            {
+                Fire(sender, request.UserRegisterRequest);
+            }
+            if (request.UserLoginRequest != null)
+            {
+                Fire(sender, request.UserLoginRequest);
+            }
+        }
+
+        /// <summary>
+        /// 处理响应
+        /// </summary>
+        private void HandleResponse(NetConnection sender, Proto.Response response)
+        {
+            if (response.UserRegisterResponse != null)
+            {
+                Fire(sender, response.UserRegisterResponse);
+            }
+            if (response.UserLoginResponse != null)
+            {
+                Fire(sender, response.UserLoginResponse);
+            }
         }
         #endregion
     }
