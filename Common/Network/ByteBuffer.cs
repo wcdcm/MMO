@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace Summer
 {
     /// <summary>
-    /// 字节缓冲处理类，仅支持大端模式
-    /// 本类非线程安全
-    /// @Date 2023-02-16 21:13:03
+    /// <para>字节缓冲处理类，仅支持大端模式</para>
+    /// <para>用于构建数据包和解析数据包</para>
+    /// <para>(本类非线程安全)</para>
     /// </summary>
     [Serializable]
     public class ByteBuffer

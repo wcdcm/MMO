@@ -32,8 +32,8 @@ namespace Common.Network
         /// <summary>
         /// <para>用于协调多线程间的通信.</para>
         /// <para>作用：</para>
-        /// <para>休眠线程(threadEvent.WaitOne())</para>
-        /// <para>唤醒线程(thread.Set())</para>
+        /// <para>休眠线程(threadEvent.WaitOne())，每次只允许休眠一个</para>
+        /// <para>唤醒线程(thread.Set())，每次只允许唤醒一个</para>
         /// </summary>
         #endregion
         AutoResetEvent threadEvent = new AutoResetEvent(true);
@@ -66,7 +66,7 @@ namespace Common.Network
 
         #region 订阅频道
         /// <summary>
-        /// 订阅频道
+        /// 供外部进行消息的订阅
         /// </summary>
         /// <typeparam name="T">消息类型，必须是IMessage的子类型</typeparam>
         /// <param name="handler"></param>
@@ -134,6 +134,9 @@ namespace Common.Network
                 }
                 catch (Exception ex) 
                 {
+                    //这里有很大可能会出错，因为订阅委托的对象如果出错就会导致整个委托链抛出异常。
+                    //比如如果订阅了技能消息，但是订阅者技能计算函数出错就会导致委托报错
+                    //所以这里需要捕获错误信息并进行堆栈跟踪
                     Console.WriteLine("MessageRouter.Fire.error:" + ex.StackTrace);
                 }
             }
@@ -195,7 +198,8 @@ namespace Common.Network
             while (workThreadCount > 0)
             {
                 #region 唤醒线程...
-                //保证没有一个线程处于休眠状态，保证代码的正常执行
+                //保证没有一个线程处于休眠状态，
+                //保证每个线程的MessageWork都能正常执行到Interlocked.Decrement(ref workThreadCount);
                 #endregion
                 threadEvent.Set();
             }

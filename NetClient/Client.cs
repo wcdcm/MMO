@@ -1,4 +1,5 @@
-﻿using Google.Protobuf;
+﻿using Common.Network;
+using Google.Protobuf;
 using Proto;
 using System.Net;
 using System.Net.Sockets;
@@ -52,17 +53,50 @@ namespace TestClient
             package.Request.UserRegisterRequest = new UserRegisterRequest();
             package.Request.UserRegisterRequest.Username = "who";
             package.Request.UserRegisterRequest.Password = "who124553";
-            //byte[] pack = package.ToByteArray();
 
-            MemoryStream rawOutput = new MemoryStream();//基于内存的数据流，用于临时存储二进制数据,作为 Protobuf 序列化数据的 “临时缓冲区”，后续序列化后的二进制内容会写入该流。
-            CodedOutputStream output = new CodedOutputStream(rawOutput);
-            package.WriteTo(output);
-            output.Flush();
+            #region 发送消息（旧）
+            ////发送消息（旧）：
+            ////基于内存的数据流，
+            ////用于临时存储二进制数据,作为 Protobuf 序列化数据的 “临时缓冲区”，
+            ////后续序列化后的二进制内容会写入该流。
+            //MemoryStream rawOutput = new MemoryStream();
+            //CodedOutputStream output = new CodedOutputStream(rawOutput);
+            //package.WriteTo(output);
+            //output.Flush();
+            //SendMessage(socket, rawOutput.ToArray());
+            //Console.ReadKey();
+            #endregion
 
-            SendMessage(socket, rawOutput.ToArray());
+            //网络连接对象：
+            //客户端也需要收发消息，所以也需要创建一个网络连接对象
+            NetConnection conn = new NetConnection(socket,
+                                  new NetConnection.DataReceivedCallback(OnDataReceived),
+                                  new NetConnection.DisConnectedCallback(OnDisConnected));
+            #region 另一种写法
+            /*
+             NetConnection conn = new NetConnection(socket,
+                                  OnDataReceived,
+                                  OnDisConnected);
+             */
+            #endregion
+
+            conn.Send(package);
+            conn.Send(package);
+            conn.Send(package);
             Console.ReadKey();
             #endregion
         }
+
+        private static void OnDisConnected(NetConnection sender)
+        {
+            
+        }
+
+        private static void OnDataReceived(NetConnection sender, byte[] data)
+        {
+            
+        }
+
 
         /// <summary>
         /// 发送消息

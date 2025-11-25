@@ -25,24 +25,22 @@ namespace GameServer.Network
             {
                 if (!isRunning)//保证当服务器没有启动时，再启动服务器，防止重复启动 重复绑定端口
                 {
-                    #region 初始化Socket对象。
+                    #region 初始化Socket对象：serverSocket
                     //Param1：指定网络地址的类型，AddressFamily.InterNetwork 表示使用 IPv4 地址 进行通信。
                     //Param2：指定Socket的通信类型，Stream表示面向连接的字节流类型
                     //Param3：指定Socket的协议类型，这里是TCP通信协议
+                    //serverSocket.Bind(endPoint)：Socket对象绑定服务器的IP和端口
+                    //serverSocket.Listen()：Socket对象进行监听该服务器端口
                     #endregion
-                    serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-                    //Socket对象绑定服务器的IP和端口
+                    serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);             
                     serverSocket.Bind(endPoint);
-
-                    //Socket对象进行监听该服务器端口
                     serverSocket.Listen();
                     Console.WriteLine("开始监听端口:" + endPoint.Port);
 
                     #region 异步接收客户端连接请求
                     // 常见的同步接收是 ： serverSocket.Accept()。这是一个同步方法，这就意味着它会阻塞主线程，在没有接收到请求之前会一直处于等待状态，阻塞后面的逻辑。
-                    // 1. 创建异步操作事件参数对象，这是一个容器，用于处理连接对象的Socket
-                    // 2. 绑定接受完成后的回调方法OnAccept，一旦有客户端连入就用OnAccept对客户端进行处理
+                    // 1. 创建异步操作事件参数对象args，这是一个容器，用于处理连接对象的Socket
+                    // 2. 绑定接收完成后的回调方法OnAccept，一旦有客户端连入就用OnAccept对客户端进行处理
                     // 3. 启动异步接收，异步接收需要一个用于处理连接的参数对象，这个对象就是args，args会存储连接的对象的Socket信息
                     #endregion
                     SocketAsyncEventArgs args = new SocketAsyncEventArgs();
@@ -57,7 +55,7 @@ namespace GameServer.Network
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        /// 
+        ///      
         #region e和args的关系
         //此处的e和args是同一个对象，当Completed事件委托触发时，args会作为参数传进OnComplete方法
         #endregion

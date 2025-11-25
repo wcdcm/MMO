@@ -38,6 +38,7 @@ namespace Network
 
         private byte[] mBuffer;   //接收数据的缓存空间
         private int mOffect;    //读取位置
+
         /// <summary>
         ///	一次性接收数据的最大字节，默认1MB
         /// </summary>
