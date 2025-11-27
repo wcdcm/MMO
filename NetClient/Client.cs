@@ -21,6 +21,9 @@ namespace TestClient
             socket.Connect(ipe);
             Console.WriteLine("成功连接到服务器");
 
+            //等待一秒钟，等服务器消息注册完成后再发消息
+            Thread.Sleep(1000);
+
             #region Test
             ////发消息：按照 消息头 + 消息体 的格式来发送
             //string text = "黄河之水天上来";
@@ -47,31 +50,13 @@ namespace TestClient
             //Console.ReadKey();
             #endregion
 
-            #region 用户注册测试
-            Proto.Package package = new Package();
-            package.Request = new Proto.Request();
-            package.Request.UserRegisterRequest = new UserRegisterRequest();
-            package.Request.UserRegisterRequest.Username = "who";
-            package.Request.UserRegisterRequest.Password = "who124553";
-
-            #region 发送消息（旧）
-            ////发送消息（旧）：
-            ////基于内存的数据流，
-            ////用于临时存储二进制数据,作为 Protobuf 序列化数据的 “临时缓冲区”，
-            ////后续序列化后的二进制内容会写入该流。
-            //MemoryStream rawOutput = new MemoryStream();
-            //CodedOutputStream output = new CodedOutputStream(rawOutput);
-            //package.WriteTo(output);
-            //output.Flush();
-            //SendMessage(socket, rawOutput.ToArray());
-            //Console.ReadKey();
-            #endregion
-
+            #region 创建网络连接对象
             //网络连接对象：
             //客户端也需要收发消息，所以也需要创建一个网络连接对象
             NetConnection conn = new NetConnection(socket,
                                   new NetConnection.DataReceivedCallback(OnDataReceived),
                                   new NetConnection.DisConnectedCallback(OnDisConnected));
+
             #region 另一种写法
             /*
              NetConnection conn = new NetConnection(socket,
@@ -79,11 +64,30 @@ namespace TestClient
                                   OnDisConnected);
              */
             #endregion
+            #endregion
 
+            #region 客户端发送消息测试
+            //快捷构建数据包并发送
+            //conn.Request.UserLoginRequest = new Proto.UserLoginRequest();
+            //conn.Request.UserLoginRequest.Username = "登录请求1";
+            //conn.Request.UserLoginRequest.Password = "123456";
+  
+
+            //conn.Request.UserRegisterRequest = new Proto.UserRegisterRequest();
+            //conn.Request.UserRegisterRequest.Username = "注册请求1";
+            //conn.Request.UserRegisterRequest.Password = "123456";
+            //conn.Send();
+
+            //外部构建数据包并发送
+            Proto.Package package = new Package();
+            package.Request = new Proto.Request();
+            package.Request.UserRegisterRequest = new UserRegisterRequest();
+            package.Request.UserRegisterRequest.Username = "注册请求2";
+            package.Request.UserRegisterRequest.Password = "who124553";
             conn.Send(package);
-            conn.Send(package);
-            conn.Send(package);
+
             Console.ReadKey();
+
             #endregion
         }
 
@@ -99,7 +103,7 @@ namespace TestClient
 
 
         /// <summary>
-        /// 发送消息
+        /// 发送字节流消息
         /// </summary>
         /// <param name="socket"></param>
         /// <param name="body"></param>

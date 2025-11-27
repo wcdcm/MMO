@@ -55,7 +55,7 @@ namespace GameServer.Network
         {
             #region Debug
             var ipe = socket.RemoteEndPoint as IPEndPoint;
-            Console.WriteLine("有客户端接入，IP是：" + ipe.Address + "、" + "对方端口是：" + ipe.Port);
+            Console.WriteLine("有客户端接入，IP是：" + ipe.Address + "、" + "对方端口是：" + ipe.Port + "\n");
             #endregion
 
             //当有客户端接入时，创建一个网络连接

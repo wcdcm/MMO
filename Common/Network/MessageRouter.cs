@@ -1,6 +1,7 @@
 ﻿using Common;
 using Google.Protobuf;
 using Proto;
+using System.Reflection;
 
 namespace Common.Network
 {
@@ -84,7 +85,8 @@ namespace Common.Network
             //委托是可以组合的，通过+号形成一个委托链，当触发委托时，所有的注册者都会被触发
             delegateMap[msgType] = (MessageHandler<T>)delegateMap[msgType] + handler;
 
-            Console.WriteLine("消息类型：" + msgType + "、" + "委托链长度：" + delegateMap[msgType].GetInvocationList().Length);
+            Console.WriteLine("消息类型：" + msgType + "、" + 
+                              "委托链长度：" + delegateMap[msgType].GetInvocationList().Length);
         }
 
         #region 退订频道
@@ -258,18 +260,21 @@ namespace Common.Network
                     if (package.Request != null)
                     {
                         //处理请求：
-                        HandleRequest(msg.sender, package.Request);
+                        Execute(msg.sender, package.Request);
                     }
 
                     if (package.Response != null)
                     {
-                        //处理响应：
-                        HandleResponse(msg.sender, package.Response);
+                        //处理响应
+                        Execute(msg.sender, package.Response);
                     }
                 }
 
             }
-            catch { }
+            catch(Exception ex) 
+            {
+                Console.WriteLine(ex.StackTrace);
+            }
 
             finally
             {
@@ -280,33 +285,41 @@ namespace Common.Network
             Console.WriteLine("work thread end");
         }
 
-        /// <summary>
-        /// 处理请求
-        /// </summary>
-        private void HandleRequest(NetConnection sender, Proto.Request request)
-        {
-            if (request.UserRegisterRequest != null)
-            {
-                Fire(sender, request.UserRegisterRequest);
-            }
-            if (request.UserLoginRequest != null)
-            {
-                Fire(sender, request.UserLoginRequest);
-            }
-        }
 
         /// <summary>
-        /// 处理响应
+        /// 根据反射原理对消息进行自动分发
         /// </summary>
-        private void HandleResponse(NetConnection sender, Proto.Response response)
+        /// <param name="sender">发送者</param>
+        /// <param name="entity">消息类型</param>
+        private void Execute(NetConnection sender,object entity) 
         {
-            if (response.UserRegisterResponse != null)
+            //获取MessageRouter类中的Fire方法(Fire为私有方法时，需要加BindingFlags的标志)
+            var fireMethod = this.GetType().GetMethod("Fire", BindingFlags.NonPublic | BindingFlags.Instance);
+            Type type = entity.GetType();
+
+            //根据类型获取所有属性
+            foreach (var p in type.GetProperties())
             {
-                Fire(sender, response.UserRegisterResponse);
-            }
-            if (response.UserLoginResponse != null)
-            {
-                Fire(sender, response.UserLoginResponse);
+                if ("Parser" == p.Name || "Descriptor" == p.Name) continue;
+
+                //通过「属性描述对象 p」，从「具体的 entity 对象」中，读取这个属性的 当前实际值
+                //（比如entity是request消息、p 是 Username 属性，就返回 request.Username 的值）。
+                var value = p.GetValue(entity);
+
+                if (value != null)
+                {
+                    //通过反射调用Fire（泛型）方法
+                    //value.GetType()获取目标属性的类型，将它作为泛型的参数
+                    #region 为什么不直接调用Fire而是要通过反射调用：
+                    /*
+                     因为泛型的参数T必须要在编译时确定，无法在程序运行时动态确定泛型的类型
+                    而该段代码显然是需要在运行时动态确定消息类型的
+                    只有通过反射才能达成运行时动态泛型类型的效果
+                     */
+                    #endregion
+                    var Fire = fireMethod.MakeGenericMethod(value.GetType());
+                    Fire.Invoke(this, new object[] { sender, value });
+                }
             }
         }
         #endregion

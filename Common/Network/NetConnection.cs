@@ -41,7 +41,7 @@ namespace Common.Network
         private DisConnectedCallback disConnectedCallback;
 
         //提供构造函数供外部注册回调
-        public NetConnection(Socket socket,DataReceivedCallback cb1, DisConnectedCallback cb2)
+        public NetConnection(Socket socket, DataReceivedCallback cb1, DisConnectedCallback cb2)
         {
             this.socket = socket;
             this.dataReceivedCallback = cb1;
@@ -53,7 +53,7 @@ namespace Common.Network
             //消息接收事件订阅
             lfd.DataReceived += DataReceivedHandler;
             //断开连接事件订阅
-            lfd.Disconnected += (Socket socket)=> disConnectedCallback?.Invoke(this);
+            lfd.Disconnected += (Socket socket) => disConnectedCallback?.Invoke(this);
             //启动消息解码器
             lfd.Start();
             #endregion
@@ -68,10 +68,53 @@ namespace Common.Network
         private void DataReceivedHandler(byte[] buffer)
         {
             //触发接收消息的回调方法
-            dataReceivedCallback?.Invoke(this,buffer);
+            dataReceivedCallback?.Invoke(this, buffer);
         }
 
-        #region 发送消息（异步）
+        #region 快捷发送网络数据包
+        private Proto.Package _package = null;
+        public Proto.Request Request
+        {
+            get
+            {
+                if (_package == null) 
+                {
+                    _package = new Proto.Package();
+                }
+                if(_package.Request == null) 
+                {
+                    _package.Request = new Proto.Request();
+                }
+                return _package.Request;
+            }
+        }
+        public Proto.Response Response
+        {
+            get
+            {
+                if (_package == null)
+                {
+                    _package = new Proto.Package();
+                }
+                if (_package.Response == null)
+                {
+                    _package.Response = new Proto.Response();
+                }
+                return _package.Response;
+            }
+        }
+
+        public void Send()
+        {
+            if (_package != null)
+            {
+                Send(_package);
+                _package = null;
+            }
+        }
+        #endregion
+
+        #region 发送网络数据包（异步）
 
         /// <summary>
         /// 发送数据包
@@ -135,12 +178,12 @@ namespace Common.Network
         /// <summary>
         /// 关闭连接
         /// </summary>
-        #endregion
         public void Close()
         {
             try { socket.Shutdown(SocketShutdown.Both); } catch { }
             socket.Close();
             socket = null;
         }
+        #endregion
     }
 }
