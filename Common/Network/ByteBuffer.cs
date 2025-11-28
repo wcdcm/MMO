@@ -17,10 +17,10 @@ namespace Summer
         //字节缓存区，需保证数组中都是大端模式数据，否则容易出错
         private byte[] _buf;
         
-        //读取索引
+        //读取索引(已经读了多长）
         private int readIndex = 0;
         
-        //写入索引
+        //写入索引（已经写了多长）
         private int writeIndex = 0;
         
         //读取索引标记
@@ -880,6 +880,7 @@ namespace Summer
                     
                     if (pool.Count < poolMaxCount)
                     {
+                        //清理当前对象的内部状态，使其恢复到可复用的初始状态
                         this.Clear();
                         pool.Enqueue(this);
                     }

@@ -1,5 +1,6 @@
 ﻿using Common;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Proto;
 using System.Reflection;
 
@@ -74,7 +75,7 @@ namespace Common.Network
         #endregion
         public void On<T>(MessageHandler<T> handler) where T : Google.Protobuf.IMessage
         {
-            string msgType = typeof(T).Name;//获取传入的消息类型的名字
+            string msgType = typeof(T).FullName;//获取传入的消息类型的名字
 
             //如果字典中不存在这么一个key，就创建它暂且将它赋值为null
             if (!delegateMap.ContainsKey(msgType))
@@ -98,7 +99,7 @@ namespace Common.Network
         #endregion
         public void Off<T>(MessageHandler<T> handler) where T : Google.Protobuf.IMessage
         {
-            string key = typeof(T).Name;//获取传入的消息类型的名字
+            string key = typeof(T).FullName;//获取传入的消息类型的名字
 
             //如果字典中不存在这么一个key，就创建它暂且将它赋值为null
             if (!delegateMap.ContainsKey(key))
@@ -110,7 +111,7 @@ namespace Common.Network
             delegateMap[key] = (MessageHandler<T>)delegateMap[key] - handler;
         }
 
-        #region 触发委托
+        #region 触发委托(通过反射)
         /// <summary>
         /// <para>根据传进来的消息类型在委托字典中
         /// 找到这个消息类型对应的委托，并触发委托</para>
@@ -121,7 +122,7 @@ namespace Common.Network
         #endregion
         private void Fire<T>(NetConnection sender, T msg)
         {
-            string typeName = typeof(T).Name;
+            string typeName = typeof(T).FullName;
 
             //如果消息类型存在，说明已有频道订阅了这个消息类型，就触发这个委托。
             //此时所有订阅了该委托的注册者都会被触发
@@ -151,7 +152,7 @@ namespace Common.Network
         /// <param name="sender">消息发送者</param>
         /// <param name="message">消息对象，一定是Package类型的</param>
         #endregion
-        public void AddMessage(NetConnection sender, Proto.Package message)
+        public void AddMessage(NetConnection sender, Google.Protobuf.IMessage message)
         {
             //将消息和发送者绑定，作为一个消息单元填入消息队列
             var unit = new MessageUnit() { sender = sender, message = message };
@@ -159,8 +160,6 @@ namespace Common.Network
 
             //唤醒某一个休眠的线程，让它进入工作状态处理消息
             threadEvent.Set();
-
-
         }
 
         #region 开启多线程（消费者模型）：
@@ -256,32 +255,12 @@ namespace Common.Network
                     MessageUnit msg = messageQueue.Dequeue();
 
                     Google.Protobuf.IMessage package = msg.message;
-                    
-                    //解析消息
-                    //if (package.Request != null)
-                    //{
-                    //    //处理请求：
-                    //    Execute(msg.sender, package.Request);
-                    //}
 
-                    //if (package.Response != null)
-                    //{
-                    //    //处理响应
-                    //    Execute(msg.sender, package.Response);
-                    //}
-                    Type t = msg.message.GetType();
-                    foreach (var p in t.GetProperties())
+                    if (package != null)
                     {
-                        if (p.Name == "Parser"||p.Name == "Descriptor") continue;
-                        Console.WriteLine(p.Name);
-                        //取出消息的值
-                        var value = p.GetValue(msg.message);
-                        if (value != null)
-                        {
-                            
-                        }
-
+                        ParserMessageLoop(msg.sender, package);
                     }
+                    
                 }
 
             }
@@ -299,20 +278,33 @@ namespace Common.Network
             Console.WriteLine("work thread end");
         }
 
-        private void ParserMessage(Google.Protobuf.IMessage message)
+        
+        private void ParserMessageLoop(NetConnection sender,Google.Protobuf.IMessage message)
         {
-            Type t = message.GetType();
-            foreach (var p in t.GetProperties())
+            //发现消息就触发订阅（即使是一个Package类型的消息，只要被订阅了就能被触发）
+            var fireMethod = this.GetType().GetMethod("Fire",BindingFlags.Instance | BindingFlags.NonPublic);
+            var fire = fireMethod.MakeGenericMethod(message.GetType());
+            fire.Invoke(this, new object[] { sender, message });
+
+            System.Type msgType = message.GetType();
+
+            foreach (var p in msgType.GetProperties())
             {
+                //过滤属性
                 if (p.Name == "Parser" || p.Name == "Descriptor") continue;
                 Console.WriteLine(p.Name);
                 //取出消息的值
                 var value = p.GetValue(message);
                 if (value != null)
                 {
-
+                    if (value.GetType().IsAssignableTo(typeof(Google.Protobuf.IMessage)))
+                    {
+                        Console.WriteLine("发现消息，触发订阅，继续递归");
+                        
+                        //继续递归
+                        ParserMessageLoop(sender, (Google.Protobuf.IMessage)value);
+                    }
                 }
-
             }
         }
 
@@ -325,7 +317,7 @@ namespace Common.Network
         {
             //获取MessageRouter类中的Fire方法(Fire为私有方法时，需要加BindingFlags的标志)
             var fireMethod = this.GetType().GetMethod("Fire", BindingFlags.NonPublic | BindingFlags.Instance);
-            Type type = entity.GetType();
+            System.Type type = entity.GetType();
 
             //根据类型获取所有属性
             foreach (var p in type.GetProperties())
