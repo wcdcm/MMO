@@ -15,7 +15,7 @@ namespace Common.Network
         public NetConnection sender;
 
         //所有不同的消息都有一个共同的父类，叫IMessage
-        public Proto.Package message;
+        public Google.Protobuf.IMessage message;
     }
 
     #region 消息分发器
@@ -255,18 +255,32 @@ namespace Common.Network
                     //从消息队列中取出一个消息单元：
                     MessageUnit msg = messageQueue.Dequeue();
 
-                    Proto.Package package = msg.message;
+                    Google.Protobuf.IMessage package = msg.message;
+                    
                     //解析消息
-                    if (package.Request != null)
-                    {
-                        //处理请求：
-                        Execute(msg.sender, package.Request);
-                    }
+                    //if (package.Request != null)
+                    //{
+                    //    //处理请求：
+                    //    Execute(msg.sender, package.Request);
+                    //}
 
-                    if (package.Response != null)
+                    //if (package.Response != null)
+                    //{
+                    //    //处理响应
+                    //    Execute(msg.sender, package.Response);
+                    //}
+                    Type t = msg.message.GetType();
+                    foreach (var p in t.GetProperties())
                     {
-                        //处理响应
-                        Execute(msg.sender, package.Response);
+                        if (p.Name == "Parser"||p.Name == "Descriptor") continue;
+                        Console.WriteLine(p.Name);
+                        //取出消息的值
+                        var value = p.GetValue(msg.message);
+                        if (value != null)
+                        {
+                            
+                        }
+
                     }
                 }
 
@@ -285,6 +299,22 @@ namespace Common.Network
             Console.WriteLine("work thread end");
         }
 
+        private void ParserMessage(Google.Protobuf.IMessage message)
+        {
+            Type t = message.GetType();
+            foreach (var p in t.GetProperties())
+            {
+                if (p.Name == "Parser" || p.Name == "Descriptor") continue;
+                Console.WriteLine(p.Name);
+                //取出消息的值
+                var value = p.GetValue(message);
+                if (value != null)
+                {
+
+                }
+
+            }
+        }
 
         /// <summary>
         /// 根据反射原理对消息进行自动分发
