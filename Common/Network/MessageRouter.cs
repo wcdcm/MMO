@@ -1,10 +1,10 @@
-﻿using Common;
+﻿using Summer;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Proto;
 using System.Reflection;
 
-namespace Common.Network
+namespace Summer.Network
 {
     #region 消息单元
     /// <summary>
@@ -292,14 +292,14 @@ namespace Common.Network
             {
                 //过滤属性
                 if (p.Name == "Parser" || p.Name == "Descriptor") continue;
-                Console.WriteLine(p.Name);
+
                 //取出消息的值
                 var value = p.GetValue(message);
                 if (value != null)
                 {
                     if (value.GetType().IsAssignableTo(typeof(Google.Protobuf.IMessage)))
                     {
-                        Console.WriteLine("发现消息，触发订阅，继续递归");
+                        //Console.WriteLine("发现消息，触发订阅，继续递归");
                         
                         //继续递归
                         ParserMessageLoop(sender, (Google.Protobuf.IMessage)value);

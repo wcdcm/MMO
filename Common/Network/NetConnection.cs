@@ -4,7 +4,7 @@ using Proto;
 using System;
 using System.Net.Sockets;
 
-namespace Common.Network
+namespace Summer.Network
 {
     #region 网络连接对象
     /// <summary>

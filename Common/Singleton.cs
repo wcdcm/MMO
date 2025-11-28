@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Common
+namespace Summer
 {
     public class Singleton<T> where T : new()
     {
