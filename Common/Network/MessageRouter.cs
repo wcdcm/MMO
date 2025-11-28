@@ -3,6 +3,7 @@ using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Proto;
 using System.Reflection;
+using System.Threading;
 
 namespace Summer.Network
 {
@@ -297,7 +298,8 @@ namespace Summer.Network
                 var value = p.GetValue(message);
                 if (value != null)
                 {
-                    if (value.GetType().IsAssignableTo(typeof(Google.Protobuf.IMessage)))
+                    //if (value.GetType().IsAssignableTo(typeof(Google.Protobuf.IMessage)))//这段代码在mono里面不支持
+                    if (typeof(Google.Protobuf.IMessage).IsAssignableFrom(value.GetType()))
                     {
                         //Console.WriteLine("发现消息，触发订阅，继续递归");
                         

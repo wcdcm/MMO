@@ -2,6 +2,7 @@
 using Network;
 using Proto;
 using System;
+using System.IO;
 using System.Net.Sockets;
 
 namespace Summer.Network
